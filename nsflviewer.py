@@ -6,6 +6,17 @@ import string
 import Tkinter as tk
 from PIL import Image, ImageTk
 
+# globally store screen size. It will be initialized in main. This may
+# look like bad style, but:
+# 1) The size of the screen is global, i.e. it's a part of the world
+#    this program lives in.
+# 2) The alternative is to pass the Tk-root element around which is
+#    inelegant.
+# 3) The data is only set once in main and remains constant throughout
+#    the program.
+globalScreenWidth = 0
+globalScreenHeight = 0
+
 class imagePixelatorObj (object):
     # This class keeps both the unpixelated image as well as the
     # pixelated image. If the user clicks the "depixelate" button,
@@ -21,6 +32,10 @@ class imagePixelatorObj (object):
         # shrinking it to the desired pixel size. Afterwards its size
         # is increased again. This way we get rid of information in
         # the image and only very large pixels remain.
+        # 
+        # Many thanks to danyshaanan, who published this code in
+        # pixelate_image.py which can be found at
+        # https://gist.github.com/danyshaanan/6754465
         image = self.originalImage.copy()
         image = image.resize((image.size[0]/self.pixelSize,
                               image.size[1]/self.pixelSize), Image.NEAREST)
@@ -46,19 +61,26 @@ class imagePixelatorObj (object):
         if self.originalImage is None or self.currentImage is None:
             print "No image yet."
             return
-        
+
+        #if so, decrease pixel size, but never below one, since that
+        #would imply ading more pixels than we had to begin with.
         if self.pixelSize / 2 <= 1:
             self.pixelSize = 1
         else:
             self.pixelSize = self.pixelSize / 2
+
+        # Run pixelation and adapt the new image to the screen's size
         self.currentImage = self.pixelateByCurrentSize()
         self.currentImage.load()
-        panelImage = ImageTk.PhotoImage(self.currentImage)
+        panelImage = resizeImageToScreen(self.currentImage)
+
+        # finally display the new image to the user. panelImage is now
+        # a Tk-PhotoImage, since resize returns it as such.
         targetPanel.configure(image = panelImage)
         # keep reference, so the GC doesn't immediately remove the image
         targetPanel.image = panelImage
 
-def resizeImageToScreen(image, root):
+def resizeImageToScreen(image):
     #store original since pixelation destroys information
     originalImage = ImageTk.PhotoImage(image)
 
@@ -68,17 +90,24 @@ def resizeImageToScreen(image, root):
     x = 0
     y = 0
 
-    screenWidth = root.winfo_screenwidth()
-    screenHeight = root.winfo_screenheight()
+    # access screen height
+    global globalScreenWidth, globalScreenHeight
+    
+    # We subtract 40 just to have some space left for buttons 
+    screenWidth = globalScreenWidth - 40
+    screenHeight = globalScreenHeight - 40
 
     #resize image if it's larger than the screen
     if w > screenWidth or h > screenHeight:
-        #calculate the aspect ratio for the image
+        # calculate the aspect ratio for the image
         ratio = min(screenWidth / float(w), screenHeight / float(h));
-        #resize image according to the aspect ratio so we fill as much
-        #screen as possible while not distorting the image. If we
-        #didn't resize large images would only be partially visible.
-        image = image.resize((w*ratio, h*ratio),Image.ANTIALIAS)
+        # resize image according to the aspect ratio so we fill as
+        # much screen as possible while not distorting the image. If
+        # we didn't resize large images would only be partially
+        # visible. The casts to int are required since resize only
+        # accepts integer arguments without a warning.
+        print "resizing to %i x %i" % (w*ratio, h*ratio)
+        image = image.resize((int(w*ratio), int(h*ratio)),Image.ANTIALIAS)
         #now reload and replace the image and correct the width and height values.
         image.load()
         originalImage = ImageTk.PhotoImage(image)
@@ -101,7 +130,7 @@ def loadImageIntoPanel(url, root, panel, pixelator, savename):
 
     image = Image.open(savename)
     # resize image and retrieve new image.
-    originalImage = resizeImageToScreen(image, root)
+    originalImage = resizeImageToScreen(image)
     
     # set the window size so it matches the image. +40 is to account
     # for the buttons. If there is a better way to do this please send
@@ -133,6 +162,11 @@ def main():
     root.geometry("%dx%d+%d+%d" % (400,200,0,0))
     panel = tk.Label(root)
     panel.pack(side='top', fill='both', expand='yes')
+
+    #get screen size
+    global globalScreenWidth, globalScreenHeight
+    globalScreenWidth = root.winfo_screenwidth() - 40
+    globalScreenHeight = root.winfo_screenheight() - 40
 
     #put all control elements in a frame
     controlFrame = tk.Frame(root)
