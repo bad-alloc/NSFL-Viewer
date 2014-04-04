@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import urllib
 import sys
 import os
@@ -72,7 +74,7 @@ class imagePixelatorObj (object):
         # Run pixelation and adapt the new image to the screen's size
         self.currentImage = self.pixelateByCurrentSize()
         self.currentImage.load()
-        panelImage = resizeImageToScreen(self.currentImage)
+        panelImage = ImageTk.PhotoImage(resizeImageToScreen(self.currentImage))
 
         # finally display the new image to the user. panelImage is now
         # a Tk-PhotoImage, since resize returns it as such.
@@ -87,15 +89,15 @@ def resizeImageToScreen(image):
     #get size info from PhotoImage
     w = originalImage.width()
     h = originalImage.height()
-    x = 0
-    y = 0
 
     # access screen height
     global globalScreenWidth, globalScreenHeight
     
-    # We subtract 40 just to have some space left for buttons 
-    screenWidth = globalScreenWidth - 40
-    screenHeight = globalScreenHeight - 40
+    # We subtract 80 to account for buttons, the title bar
+    # etc. Probably not the best solution, but Tk doesn't offer
+    # anything to limit image size
+    screenWidth = globalScreenWidth - 80
+    screenHeight = globalScreenHeight - 80
 
     #resize image if it's larger than the screen
     if w > screenWidth or h > screenHeight:
@@ -106,16 +108,13 @@ def resizeImageToScreen(image):
         # we didn't resize large images would only be partially
         # visible. The casts to int are required since resize only
         # accepts integer arguments without a warning.
-        print "resizing to %i x %i" % (w*ratio, h*ratio)
         image = image.resize((int(w*ratio), int(h*ratio)),Image.ANTIALIAS)
         #now reload and replace the image and correct the width and height values.
         image.load()
-        originalImage = ImageTk.PhotoImage(image)
 
-    return originalImage
+    return image
 
 def loadImageIntoPanel(url, root, panel, pixelator, savename):
-    print "ok"
     try:
         urllib.urlretrieve(url, savename)
     except IOError:
@@ -126,16 +125,13 @@ def loadImageIntoPanel(url, root, panel, pixelator, savename):
         print e
         return
 
-    print "loading " + url
-
     image = Image.open(savename)
     # resize image and retrieve new image.
-    originalImage = resizeImageToScreen(image)
+    image = resizeImageToScreen(image)
+    originalImage = ImageTk.PhotoImage(image)
     
-    # set the window size so it matches the image. +40 is to account
-    # for the buttons. If there is a better way to do this please send
-    # me a pull request :)
-    root.geometry("%dx%d+%d+%d" % (originalImage.width(),originalImage.height()+40,0,0))
+    # set the window size so it matches the image.
+    root.geometry("%dx%d+%d+%d" % (originalImage.width(),originalImage.height(),0,0))
 
     # get a pixelator instance and initialize it with the image.
     pixelator.setImage(image)
@@ -144,6 +140,7 @@ def loadImageIntoPanel(url, root, panel, pixelator, savename):
     pixelated = pixelator.currentImage
     pixelated = ImageTk.PhotoImage(pixelated)
     panel.configure(image = pixelated)
+    panel.configure(height = image.size[0], width = image.size[1])
     panel.image = pixelated
 
 def randomFile():
@@ -165,8 +162,8 @@ def main():
 
     #get screen size
     global globalScreenWidth, globalScreenHeight
-    globalScreenWidth = root.winfo_screenwidth() - 40
-    globalScreenHeight = root.winfo_screenheight() - 40
+    globalScreenWidth = root.winfo_screenwidth()
+    globalScreenHeight = root.winfo_screenheight()
 
     #put all control elements in a frame
     controlFrame = tk.Frame(root)

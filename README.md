@@ -15,5 +15,3 @@ Then simply paste a direct link to an image into the text field and click the "L
 
 * Imgur support: Load images from indirect imgur links
 * Imgur support: Support albums
-* Better error handling
-* Less fragile UI
