@@ -155,7 +155,7 @@ def main():
 
     #prepare window
     root = tk.Tk()
-    root.title('NSFL Viewer')
+    root.title('Safe Image Viewer')
     root.geometry("%dx%d+%d+%d" % (400,200,0,0))
     panel = tk.Label(root)
     panel.pack(side='top', fill='both', expand='yes')
@@ -195,7 +195,7 @@ def main():
         root.mainloop()
     except KeyboardInterrupt:
         # If the users kills us via keyboard we do nothing, except
-        # removing the NSFL file. Capturing this event might take some
+        # removing the image file. Capturing this event might take some
         # time because Tk checks for keyboard interrupts infrequently.
         pass
     except e:
